@@ -15,10 +15,10 @@ NLnetLabs/ldns and skips when that version is already released here. A manual
 dispatch takes an optional version argument.
 
 1. The workflow builds both architectures from that tag.
-2. It publishes `ldns-<version>` with `ldns-windows-<arch>.zip` + `.sha256`, and
-   reads the assets back by size.
-3. If `PAT_SCOOP_RW` is set it also bumps `bucket/ldns.json`; otherwise the
-   bucket's own nightly autoupdate picks the release up through its `checkver`.
+2. It verifies each zip against its own `.sha256`, publishes `ldns-<version>` with
+   `ldns-windows-<arch>.zip` + `.sha256`, and stops there.
+3. Nothing else: the workflow does not write to other repos. The bucket's own
+   nightly autoupdate picks the release up through its `checkver`.
 
 A published version is never rebuilt — see `IDEA.md`.
 

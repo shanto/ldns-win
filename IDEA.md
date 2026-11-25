@@ -48,9 +48,11 @@ for one package. Two patches are required; neither is upstreamable as-is, see be
 - **`BUILD-NOTICE.txt` goes inside the archive.** Upstream publishes no Windows
   binaries and does not support these; the archive says so, with version, commit, run
   URL and the patch list.
-- **The bucket bump is optional and gated.** It needs `PAT_SCOOP_RW` (a cross-repo
-  write; `GITHUB_TOKEN` cannot), and it only touches a manifest whose download URLs
-  already point at this repo's releases — otherwise it logs and leaves it alone.
+- **This workflow never writes outside this repo.** Publishing ends at the release;
+  there is no cross-repo token, no bucket manifest edit and no post-upload read-back
+  step. The bucket's own nightly autoupdate is the only thing that moves
+  `bucket/ldns.json`, which keeps the direction of trust one-way: releases here,
+  polling from there.
 
 ## Bucket wiring (shanto/Scoop)
 
@@ -71,6 +73,8 @@ bucket will never see.
 - No release line for a patch-only fix: a fix to `patches/` cannot ship under an
   existing tag (the bucket's autoupdate URL is keyed on the version). It waits for
   the next upstream tag, or a manual delete-and-rebuild of the release.
-- `PAT_SCOOP_RW` is not set on this repo, so the bucket bump step no-ops; the
-  bucket's own nightly autoupdate covers it, one run behind at worst.
+- The bucket picks a new release up on its next nightly autoupdate (04:23 UTC) or a
+  manual `Autoupdate` dispatch — at worst a day behind, never a version ahead.
+- Nothing in CI reads the published assets back; the release is verified by hand
+  (`gh release view`, download + hash) when it matters.
 - `task verify-patches` is untested here (no `task` in the agent container).

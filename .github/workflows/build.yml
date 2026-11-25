@@ -29,6 +29,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
+      commit: ${{ steps.upstream.outputs.commit }}
       published: ${{ steps.published.outputs.published }}
 
     steps:
@@ -53,6 +54,7 @@ jobs:
           echo "tag=ldns-$version" >> "$GITHUB_OUTPUT"
 
       - name: Prove the upstream tag exists
+        id: upstream
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.version.outputs.version }}
@@ -60,7 +62,12 @@ jobs:
           set -euo pipefail
           # Fail here rather than half way through a matrix build against a tag
           # that NLnetLabs never published.
-          sha="$(gh api "repos/NLnetLabs/ldns/git/ref/tags/$VERSION" --jq '.object.sha')"
+          ref="$(gh api "repos/NLnetLabs/ldns/git/ref/tags/$VERSION")"
+          sha="$(printf '%s' "$ref" | jq -r '.object.sha')"
+          if [ "$(printf '%s' "$ref" | jq -r '.object.type')" = "tag" ]; then
+            sha="$(gh api "repos/NLnetLabs/ldns/git/tags/$sha" --jq '.object.sha')"
+          fi
+          echo "commit=$sha" >> "$GITHUB_OUTPUT"
           echo "NLnetLabs/ldns $VERSION -> $sha"
 
       - name: Skip when this version is already released
@@ -180,6 +187,7 @@ jobs:
         working-directory: ldns
         env:
           VERSION: ${{ needs.resolve.outputs.version }}
+          UPSTREAM_COMMIT: ${{ needs.resolve.outputs.commit }}
           ARCH: ${{ matrix.arch }}
         run: |
           set -e
@@ -199,7 +207,7 @@ jobs:
             echo "Unofficial Windows build of ldns $VERSION ($ARCH)."
             echo
             echo "Built by $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-            echo "from NLnetLabs/ldns $VERSION ($(git rev-parse HEAD))."
+            echo "from NLnetLabs/ldns $VERSION ($UPSTREAM_COMMIT)."
             echo "Upstream does not publish or support Windows binaries; report problems"
             echo "with this build here, not upstream."
             echo

@@ -343,7 +343,7 @@ jobs:
           arm64="$(awk '{print $1}' ldns-windows-arm64.zip.sha256)"
           base="https://github.com/$GITHUB_REPOSITORY/releases/download/ldns-$VERSION/"
           autoupdate_base="https://github.com/$GITHUB_REPOSITORY/releases/download/ldns-\$version/"
-          jq --arg version "$VERSION" --arg base "$base" --arg auto "$autoupdate_base" \
+          jq --indent 4 --arg version "$VERSION" --arg base "$base" --arg auto "$autoupdate_base" \
             --arg x64 "$x64" --arg arm64 "$arm64" \
             '.version = $version
             | .architecture["64bit"].url = ($base + "ldns-windows-x64.zip")

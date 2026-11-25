@@ -125,13 +125,6 @@ jobs:
             ${{ matrix.openssl }}
             zip
 
-      # The patches are LF. Windows runners default to core.autocrlf=true, which
-      # would check ldns out as CRLF and make every hunk fail to match.
-      - name: Keep the ldns checkout LF
-        run: |
-          git config --global core.autocrlf false
-          git config --global core.eol lf
-
       - name: Checkout build recipe
         uses: actions/checkout@v5
 
@@ -145,11 +138,14 @@ jobs:
 
       - name: Apply patches
         working-directory: ldns
+        shell: bash
         run: |
           set -e
+          # The patches are LF. A Windows runner that checked ldns out as CRLF
+          # makes every hunk miss, so normalize the two patched files first.
           if grep -q $'\r' configure.ac drill/drill.c; then
-            echo "ldns checkout is CRLF; the patches are LF. Check core.autocrlf." >&2
-            exit 1
+            echo "ldns checkout is CRLF; normalizing configure.ac and drill/drill.c to LF"
+            sed -i 's/\r$//' configure.ac drill/drill.c
           fi
           for patch in ../patches/ldns-windows-winsock.patch \
                        ../patches/ldns-windows-resolver.patch; do

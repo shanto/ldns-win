@@ -24,9 +24,11 @@ for one package. Two patches are required; neither is upstreamable as-is, see be
 - **Version comes from `VERSION`, not from a consumer.** In the bucket the workflow
   grepped `bucket/ldns.json`; that tied the build to a checkout of another repo. The
   manifest is now downstream of the release, not upstream of it.
-- **The ldns checkout is forced to LF** (`core.autocrlf false`, `core.eol lf`) before
-  checkout, and the apply step fails closed if the tree is CRLF. The patches are LF;
-  a Windows runner's default CRLF checkout makes every hunk miss.
+- **The apply step normalizes a CRLF ldns checkout** instead of the build trying
+  to configure git. The patches are LF; a Windows runner that checks ldns out as
+  CRLF makes every hunk miss, so the step strips CR from `configure.ac` and
+  `drill/drill.c` before applying. (A separate `git config --global core.autocrlf`
+  step failed on the MSYS2 shell — git is not guaranteed there — and was removed.)
 - **Patches are LF and this repo is LF** (`.gitattributes: eol=lf`), unlike the bucket
   repos (CRLF). Inline `run:` shell scripts and patch files must not carry CR.
 - **The dead `install-sh` copy is gone.** The old workflow had

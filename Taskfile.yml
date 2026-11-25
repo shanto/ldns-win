@@ -1,0 +1,42 @@
+version: "3"
+
+tasks:
+  cancel-runs:
+    desc: Cancel queued and in-progress GitHub Actions workflow runs
+    cmds:
+      - gh run list --limit 100 --json databaseId,status --jq '.[] | select(.status == "queued" or .status == "in_progress") | .databaseId' | while read d; do gh run cancel $d; done
+
+  delete-completed-run:
+    desc: Delete the 10 most recent completed runs
+    cmds:
+      - gh run list -s completed -L 10 --json databaseId --jq '.[] | .databaseId' | while read d; do gh run delete $d; done
+
+  last-log:
+    desc: Show the log of the most recent run
+    cmds:
+      - gh run list -L 1 --json databaseId --jq '.[] | .databaseId' | read d && gh run view $d --log
+
+  watch-run:
+    desc: Open the most recent in-progress run in the browser
+    cmds:
+      - gh run list -s in_progress -L 1 --json databaseId --jq '.[] | .databaseId' | read d && gh run view $d --web
+
+  download-artifact:*:
+    desc: Download a run artifact into ./build
+    cmds:
+      - mkdir -p ./build
+      - rm -rf ./build/{{index .MATCH 0}}
+      - gh run download -n {{index .MATCH 0}} -D build/{{index .MATCH 0}}
+
+  verify-patches:
+    desc: Clone ldns at VERSION and prove the patches apply cleanly
+    vars:
+      VERSION:
+        sh: tr -d '[:space:]' < VERSION
+    cmds:
+      - rm -rf build/ldns
+      - mkdir -p build
+      - git clone -q --depth 1 --branch {{.VERSION}} https://github.com/NLnetLabs/ldns.git build/ldns
+      - git -C build/ldns config core.autocrlf false
+      - for patch in patches/*.patch; do echo "checking $patch"; git -C build/ldns apply --check "$PWD/$patch"; git -C build/ldns apply "$PWD/$patch"; done
+      - git -C build/ldns diff --stat

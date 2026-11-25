@@ -25,13 +25,15 @@ for one package. Two patches are required; neither is upstreamable as-is, see be
   workflow lists tags and keeps the newest stable `X.Y.Z`. The bucket used to be
   the version source; that made a bucket bump race the artifacts, so the bucket's
   `checkver` now reads this repo's releases instead.
-- **The apply step normalizes a CRLF ldns checkout** instead of the build trying
-  to configure git. The patches are LF; a Windows runner that checks ldns out as
-  CRLF makes every hunk miss, so the step strips CR from `configure.ac` and
-  `drill/drill.c` before applying. (A separate `git config --global core.autocrlf`
-  step failed on the MSYS2 shell — git is not guaranteed there — and was removed.)
-- **Patches are LF and this repo is LF** (`.gitattributes: eol=lf`), unlike the bucket
-  repos (CRLF). Inline `run:` shell scripts and patch files must not carry CR.
+- **LF end to end, pinned at the checkout rather than repaired afterwards.** This
+  repo and the patches are LF (`.gitattributes: * text=auto eol=lf`), and the Windows
+  checkout of NLnetLabs/ldns is forced to LF with `GIT_CONFIG_COUNT` /
+  `GIT_CONFIG_KEY_0=core.autocrlf=false` / `core.eol=lf` on the checkout step. Git
+  reads those from the environment, so no step writes a config file and no build step
+  rewrites source files; `git apply` just sees an LF tree. (An earlier
+  `git config --global` step failed because the MSYS2 shell has no `git` on PATH, and
+  a later `sed` that stripped CR from two files was dead code — both are gone.)
+  The bucket repos stay CRLF, following Scoop's own convention.
 - **`mkdir -p .libs` before `make` is load-bearing.** The Makefile's
   `setup-builddir` rule runs `ln -s .libs lib`; MSYS2's `ln` emulation copies the
   target rather than symlinking, so a missing `.libs` kills the build with

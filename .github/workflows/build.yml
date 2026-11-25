@@ -148,6 +148,15 @@ jobs:
 
       - name: Checkout ldns
         uses: actions/checkout@v5
+        env:
+          # This repo and the patches are LF, and the build tree should be too.
+          # Environment config means the git actions/checkout spawns sees this
+          # without any step writing a config file or rewriting sources.
+          GIT_CONFIG_COUNT: "2"
+          GIT_CONFIG_KEY_0: core.autocrlf
+          GIT_CONFIG_VALUE_0: "false"
+          GIT_CONFIG_KEY_1: core.eol
+          GIT_CONFIG_VALUE_1: "lf"
         with:
           path: ldns
           repository: NLnetLabs/ldns
@@ -159,12 +168,6 @@ jobs:
         shell: bash
         run: |
           set -e
-          # The patches are LF. A Windows runner that checked ldns out as CRLF
-          # makes every hunk miss, so normalize the two patched files first.
-          if grep -q $'\r' configure.ac drill/drill.c; then
-            echo "ldns checkout is CRLF; normalizing configure.ac and drill/drill.c to LF"
-            sed -i 's/\r$//' configure.ac drill/drill.c
-          fi
           for patch in ../patches/ldns-windows-winsock.patch \
                        ../patches/ldns-windows-resolver.patch; do
             echo "Applying $patch"

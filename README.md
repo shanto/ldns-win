@@ -10,13 +10,17 @@ published here and holds no build recipe of its own.
 
 ## Releasing
 
-1. Bump `VERSION` (the ldns tag to build, e.g. `1.9.2`), commit, push to `master`.
-2. The workflow builds both architectures, publishes `ldns-<version>` with
-   `ldns-windows-<arch>.zip` + `.sha256`, and reads the assets back.
-3. If `PAT_SCOOP_RW` is set, it also bumps `bucket/ldns.json` in the bucket repo.
+Nothing to bump by hand: a daily run (03:00 UTC) reads the newest stable tag from
+NLnetLabs/ldns and skips when that version is already released here. A manual
+dispatch takes an optional version argument.
 
-A manual run takes an optional version argument; with none it builds `VERSION`.
-Publishing the same version twice is refused — see `IDEA.md`.
+1. The workflow builds both architectures from that tag.
+2. It publishes `ldns-<version>` with `ldns-windows-<arch>.zip` + `.sha256`, and
+   reads the assets back by size.
+3. If `PAT_SCOOP_RW` is set it also bumps `bucket/ldns.json`; otherwise the
+   bucket's own nightly autoupdate picks the release up through its `checkver`.
+
+A published version is never rebuilt — see `IDEA.md`.
 
 ## Local check
 

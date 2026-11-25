@@ -8,7 +8,6 @@ for one package. Two patches are required; neither is upstreamable as-is, see be
 
 ## Layout
 
-- `VERSION` — the ldns tag to build. Single source of truth; the workflow reads it.
 - `patches/` — applied in filename order on top of the upstream tag.
   - `ldns-windows-winsock.patch` — configure.ac: detect `windows.h`, define
     `USE_WINSOCK`, link `iphlpapi`.
@@ -21,9 +20,11 @@ for one package. Two patches are required; neither is upstreamable as-is, see be
 
 ## Decisions
 
-- **Version comes from `VERSION`, not from a consumer.** In the bucket the workflow
-  grepped `bucket/ldns.json`; that tied the build to a checkout of another repo. The
-  manifest is now downstream of the release, not upstream of it.
+- **The version comes from upstream, not from a file or a consumer.** NLnetLabs
+  publishes tags but no GitHub *releases*, so `/releases/latest` 404s and the
+  workflow lists tags and keeps the newest stable `X.Y.Z`. The bucket used to be
+  the version source; that made a bucket bump race the artifacts, so the bucket's
+  `checkver` now reads this repo's releases instead.
 - **The apply step normalizes a CRLF ldns checkout** instead of the build trying
   to configure git. The patches are LF; a Windows runner that checks ldns out as
   CRLF makes every hunk miss, so the step strips CR from `configure.ac` and
@@ -51,22 +52,23 @@ for one package. Two patches are required; neither is upstreamable as-is, see be
 
 ## Bucket wiring (shanto/Scoop)
 
-`bucket/ldns.json` must point at this repo:
+`bucket/ldns.json` points at this repo:
 
 ```
 https://github.com/shanto/ldns-win/releases/download/ldns-$version/ldns-windows-<arch>.zip
 hash: $url.sha256
+checkver: github -> shanto/ldns-win releases/latest, version derived from the tag
 ```
 
-`checkver` still reads `https://nlnetlabs.nl/projects/ldns/about/` for the version;
-this repo publishes no pointer file, so that page stays the upstream version signal.
+Both directions now read what is already published: the bucket cannot bump to a
+version whose artifacts do not exist, and this repo cannot publish a version the
+bucket will never see.
 
 ## Not done yet
 
-- Repo not created on GitHub and nothing pushed (local commit only).
-- `bucket/ldns.json` still downloads from `shanto/Scoop`'s `ldns-1.9.2` release. Repoint
-  it after the first release here, not before — the assets do not exist here yet.
-- The old `.github/patches/` and `.github/workflows/build-ldns.yml` are still in
-  shanto/Scoop, so a bucket push can still trigger a build there; delete them when the
-  manifest is repointed.
-- No scheduled upstream check: a new ldns release needs a `VERSION` bump.
+- No release line for a patch-only fix: a fix to `patches/` cannot ship under an
+  existing tag (the bucket's autoupdate URL is keyed on the version). It waits for
+  the next upstream tag, or a manual delete-and-rebuild of the release.
+- `PAT_SCOOP_RW` is not set on this repo, so the bucket bump step no-ops; the
+  bucket's own nightly autoupdate covers it, one run behind at worst.
+- `task verify-patches` is untested here (no `task` in the agent container).

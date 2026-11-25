@@ -4,14 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "ldns version to build (defaults to the VERSION file)"
+        description: "ldns version to build (defaults to the newest upstream tag)"
         required: false
         type: string
+  schedule:
+    # Daily, well before the bucket's 04:23 autoupdate, so a new upstream tag
+    # usually has its release published by the time the bucket looks.
+    - cron: "0 3 * * *"
   push:
     branches:
       - master
     paths:
-      - "VERSION"
       - "patches/**"
       - ".github/workflows/build.yml"
 
@@ -40,11 +43,19 @@ jobs:
         id: version
         env:
           REQUESTED: ${{ inputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           version="$REQUESTED"
           if [ -z "$version" ]; then
-            version="$(tr -d '[:space:]' < VERSION)"
+            # NLnetLabs publishes tags, not GitHub releases, so there is no
+            # /releases/latest to read: take the newest stable X.Y.Z tag and
+            # let the already-published guard below dedupe.
+            version="$(gh api 'repos/NLnetLabs/ldns/tags?per_page=100' --paginate \
+              --jq '.[].name' \
+              | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' \
+              | sort -V | tail -n 1)"
+            echo "newest upstream tag: $version"
           fi
           if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
             echo "::error::'$version' is not an ldns version string (expected e.g. 1.9.2)" >&2

@@ -29,14 +29,11 @@ tasks:
       - gh run download -n {{index .MATCH 0}} -D build/{{index .MATCH 0}}
 
   verify-patches:
-    desc: Clone ldns at VERSION and prove the patches apply cleanly
-    vars:
-      VERSION:
-        sh: tr -d '[:space:]' < VERSION
+    desc: Clone the newest upstream tag and prove the patches apply cleanly
     cmds:
       - rm -rf build/ldns
       - mkdir -p build
-      - git clone -q --depth 1 --branch {{.VERSION}} https://github.com/NLnetLabs/ldns.git build/ldns
+      - git clone -q --depth 1 --branch "$(gh api 'repos/NLnetLabs/ldns/tags?per_page=100' --paginate --jq '.[].name' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)" https://github.com/NLnetLabs/ldns.git build/ldns
       - git -C build/ldns config core.autocrlf false
       - for patch in patches/*.patch; do echo "checking $patch"; git -C build/ldns apply --check "$PWD/$patch"; git -C build/ldns apply "$PWD/$patch"; done
       - git -C build/ldns diff --stat

@@ -31,6 +31,10 @@ for one package. Two patches are required; neither is upstreamable as-is, see be
   step failed on the MSYS2 shell — git is not guaranteed there — and was removed.)
 - **Patches are LF and this repo is LF** (`.gitattributes: eol=lf`), unlike the bucket
   repos (CRLF). Inline `run:` shell scripts and patch files must not carry CR.
+- **`mkdir -p .libs` before `make` is load-bearing.** The Makefile's
+  `setup-builddir` rule runs `ln -s .libs lib`; MSYS2's `ln` emulation copies the
+  target rather than symlinking, so a missing `.libs` kills the build with
+  `ln: failed to create symbolic link 'lib'`. Do not remove it.
 - **The dead `install-sh` copy is gone.** The old workflow had
   `test ! -f install-sh -a -f ../../install-sh` with `../../install-sh` outside the
   workspace, so it never fired. `autoreconf -fi` installs `install-sh` itself.

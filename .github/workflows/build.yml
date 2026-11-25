@@ -166,6 +166,11 @@ jobs:
             --with-drill \
             --with-examples \
             --with-trust-anchor=root.key
+          # Required: the Makefile's setup-builddir rule runs `ln -s .libs lib`,
+          # and MSYS2's ln emulation copies the target instead of symlinking it,
+          # so `.libs` must already exist or make dies with "ln: failed to create
+          # symbolic link 'lib': No such file or directory".
+          mkdir -p .libs
           make -j"$(nproc)"
           STAGING="$(cygpath "$GITHUB_WORKSPACE")/staging"
           rm -rf "$STAGING"
